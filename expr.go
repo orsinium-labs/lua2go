@@ -174,6 +174,26 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 			}
 			emit(stdout, "}")
 		}
+	case *ast.FuncCallExpr:
+		err := convertExpr(stdout, ex.Func)
+		if err != nil {
+			return err
+		}
+		if ex.Method != "" {
+			emit(stdout, ".", ex.Method)
+		}
+		if ex.Receiver != nil {
+			return errors.New("unsupported: function receiver")
+		}
+		for i, arg := range ex.Args {
+			if i != 0 {
+				emit(stdout, ", ")
+				err := convertExpr(stdout, arg)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	default:
 		return errors.New("unsupported statement")
 	}
