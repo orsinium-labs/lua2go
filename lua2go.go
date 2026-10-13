@@ -71,6 +71,8 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 			}
 		}
 		emit(stdout, "}")
+	case *ast.FuncCallStmt:
+		return convertExpr(stdout, st.Expr)
 	default:
 		return errors.New("unsupported statement")
 	}
@@ -216,6 +218,44 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 			return fmt.Errorf("convert lhs %T: %v", ex.Expr, err)
 		}
 		emit(stdout, ")")
+	case *ast.TableExpr:
+		isArray := true
+		for _, f := range ex.Fields {
+			if f.Key != nil {
+				isArray = false
+				break
+			}
+		}
+		if isArray {
+			emit(stdout, "[]any{")
+			for i, f := range ex.Fields {
+				if i != 0 {
+					emit(stdout, ", ")
+				}
+				err := convertExpr(stdout, f.Value)
+				if err != nil {
+					return err
+				}
+			}
+			emit(stdout, "}")
+		} else {
+			emit(stdout, "map[any]any{")
+			for i, f := range ex.Fields {
+				if i != 0 {
+					emit(stdout, ", ")
+				}
+				err := convertExpr(stdout, f.Key)
+				if err != nil {
+					return err
+				}
+				emit(stdout, ": ")
+				err = convertExpr(stdout, f.Value)
+				if err != nil {
+					return err
+				}
+			}
+			emit(stdout, "}")
+		}
 	default:
 		return errors.New("unsupported statement")
 	}
