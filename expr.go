@@ -28,13 +28,9 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 		if err != nil {
 			return fmt.Errorf("convert %T: %v", ex.Object, err)
 		}
-		_, isStr := ex.Key.(*ast.StringExpr)
+		key, isStr := ex.Key.(*ast.StringExpr)
 		if isStr {
-			emit(stdout, ".")
-			err = convertExpr(stdout, ex.Key)
-			if err != nil {
-				return fmt.Errorf("convert %T: %v", ex.Key, err)
-			}
+			emit(stdout, ".", key.Value)
 		} else {
 			emit(stdout, "[")
 			err = convertExpr(stdout, ex.Key)
