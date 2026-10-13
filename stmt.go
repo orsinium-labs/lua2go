@@ -47,7 +47,7 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 			return err
 		}
 	case *ast.WhileStmt:
-		emit(stdout, "while ")
+		emit(stdout, "for ")
 		err := convertExpr(stdout, st.Condition)
 		if err != nil {
 			return err
@@ -57,32 +57,16 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 			return err
 		}
 	case *ast.RepeatStmt:
-		emit(stdout, "firstLoop := true\n")
-		for range depth {
-			emit(stdout, "\t")
-		}
-		emit(stdout, "while firstLoop || ")
+		emit(stdout, "for firstLoop := true; firstLoop || ")
 		err := convertExpr(stdout, st.Condition)
 		if err != nil {
 			return err
 		}
-		depth++
-		emit(stdout, "{\n")
-		for range depth {
-			emit(stdout, "\t")
+		emit(stdout, "; firstLoop = false")
+		err = convertBlock(stdout, st.Stmts)
+		if err != nil {
+			return err
 		}
-		emit(stdout, "firstLoop = false\n")
-		for _, sub := range st.Stmts {
-			err := convertStmt(stdout, sub)
-			if err != nil {
-				return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
-			}
-		}
-		for range depth - 1 {
-			emit(stdout, "\t")
-		}
-		emit(stdout, "}")
-		depth--
 	case *ast.IfStmt:
 		emit(stdout, "if ")
 		err := convertExpr(stdout, st.Condition)
@@ -133,6 +117,7 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		} else {
 			emit(stdout, strings.Join(st.Names, ", "))
 		}
+		emit(stdout, " := range ")
 		err := convertTuple(stdout, st.Exprs)
 		if err != nil {
 			return err

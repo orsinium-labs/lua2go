@@ -22,6 +22,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("parse AST: %v", err)
 	}
+	emit(os.Stdout, "package main\n\n")
 	for _, stmt := range stmts {
 		err := convertStmt(os.Stdout, stmt)
 		if err != nil {
