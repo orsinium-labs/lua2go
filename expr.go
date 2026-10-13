@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/yuin/gopher-lua/ast"
 )
@@ -194,6 +195,21 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 				}
 			}
 		}
+	case *ast.FunctionExpr:
+		emit(stdout, "func(")
+		if ex.ParList != nil {
+			if len(ex.ParList.Names) != 0 {
+				emit(stdout, strings.Join(ex.ParList.Names, ", "))
+			}
+		}
+		emit(stdout, ") any {")
+		for _, stmt := range ex.Stmts {
+			err := convertStmt(stdout, stmt)
+			if err != nil {
+				return fmt.Errorf("convert %T on line %d: %v", stmt, stmt.Line(), err)
+			}
+		}
+		emit(stdout, "}")
 	default:
 		return errors.New("unsupported statement")
 	}
