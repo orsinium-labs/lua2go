@@ -35,56 +35,66 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 	case *ast.FuncCallStmt:
 		return convertExpr(stdout, st.Expr)
 	case *ast.DoBlockStmt:
-		emit(stdout, "{\n")
-		for _, sub := range st.Stmts {
-			err := convertStmt(stdout, sub)
-			if err != nil {
-				return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
-			}
-		}
-		emit(stdout, "}")
+		return convertBlock(stdout, st.Stmts)
 	case *ast.WhileStmt:
 		emit(stdout, "while ")
 		err := convertExpr(stdout, st.Condition)
 		if err != nil {
 			return err
 		}
-		emit(stdout, " {\n")
-		for _, sub := range st.Stmts {
-			err := convertStmt(stdout, sub)
-			if err != nil {
-				return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
-			}
-		}
-		emit(stdout, "}")
+		return convertBlock(stdout, st.Stmts)
 	case *ast.IfStmt:
 		emit(stdout, "if ")
 		err := convertExpr(stdout, st.Condition)
 		if err != nil {
 			return err
 		}
-		emit(stdout, " {\n")
-		for _, sub := range st.Then {
-			err := convertStmt(stdout, sub)
-			if err != nil {
-				return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
-			}
+		err = convertBlock(stdout, st.Then)
+		if err != nil {
+			return err
 		}
-		emit(stdout, "}")
 		if len(st.Else) != 0 {
-			emit(stdout, " else {\n")
-			for _, sub := range st.Else {
-				err := convertStmt(stdout, sub)
-				if err != nil {
-					return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
-				}
-			}
-			emit(stdout, "}")
+			emit(stdout, " else ")
+			return convertBlock(stdout, st.Else)
 		}
+	case *ast.NumberForStmt:
+		emit(stdout, "for ", st.Name, " := ")
+		err := convertExpr(stdout, st.Init)
+		if err != nil {
+			return err
+		}
+		emit(stdout, "; ", st.Name, " <= ")
+		err = convertExpr(stdout, st.Limit)
+		if err != nil {
+			return err
+		}
+		if st.Step != nil {
+			emit(stdout, "; ", st.Name, " += ")
+			err := convertExpr(stdout, st.Step)
+			if err != nil {
+				return err
+			}
+			emit(stdout, " ")
+		} else {
+			emit(stdout, "; ", st.Name, "++ ")
+		}
+		return convertBlock(stdout, st.Stmts)
 	default:
 		return errors.New("unsupported statement")
 	}
 	emit(stdout, "\n")
+	return nil
+}
+
+func convertBlock(stdout io.Writer, stmts []ast.Stmt) error {
+	emit(stdout, " {\n")
+	for _, sub := range stmts {
+		err := convertStmt(stdout, sub)
+		if err != nil {
+			return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
+		}
+	}
+	emit(stdout, "}")
 	return nil
 }
 
