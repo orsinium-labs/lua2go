@@ -116,6 +116,15 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		}
 		emit(stdout, ") any ")
 		return convertBlock(stdout, ex.Stmts)
+	case *ast.ReturnStmt:
+		emit(stdout, "return ")
+		return convertTuple(stdout, st.Exprs)
+	case *ast.BreakStmt:
+		emit(stdout, "break")
+	case *ast.LabelStmt:
+		emit(stdout, st.Name, ":")
+	case *ast.GotoStmt:
+		emit(stdout, "goto ", st.Label)
 	default:
 		return errors.New("unsupported statement")
 	}
