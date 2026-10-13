@@ -45,7 +45,6 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		if err != nil {
 			return err
 		}
-		emit(stdout, "\n")
 	case *ast.LocalAssignStmt:
 		for i, name := range st.Names {
 			if i != 0 {
@@ -58,10 +57,24 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		if err != nil {
 			return err
 		}
-		emit(stdout, "\n")
+	case *ast.WhileStmt:
+		emit(stdout, "while ")
+		err := convertExpr(stdout, st.Condition)
+		if err != nil {
+			return err
+		}
+		emit(stdout, " {")
+		for _, sub := range st.Stmts {
+			err := convertStmt(stdout, sub)
+			if err != nil {
+				return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
+			}
+		}
+		emit(stdout, "}")
 	default:
 		return errors.New("unsupported statement")
 	}
+	emit(stdout, "\n")
 	return nil
 }
 
@@ -103,6 +116,106 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 		if err != nil {
 			return fmt.Errorf("convert %T: %v", ex.Key, err)
 		}
+	case *ast.LogicalOpExpr:
+		emit(stdout, "(")
+		err := convertExpr(stdout, ex.Lhs)
+		if err != nil {
+			return fmt.Errorf("convert lhs %T: %v", ex.Lhs, err)
+		}
+		switch ex.Operator {
+		case "and":
+			emit(stdout, " && ")
+		case "or":
+			emit(stdout, " || ")
+		default:
+			return fmt.Errorf("unsupported logical operator: %s", ex.Operator)
+		}
+		err = convertExpr(stdout, ex.Rhs)
+		if err != nil {
+			return fmt.Errorf("convert rhs %T: %v", ex.Rhs, err)
+		}
+		emit(stdout, ")")
+	case *ast.RelationalOpExpr:
+		emit(stdout, "(")
+		err := convertExpr(stdout, ex.Lhs)
+		if err != nil {
+			return fmt.Errorf("convert lhs %T: %v", ex.Lhs, err)
+		}
+		op := ex.Operator
+		if op == "~=" {
+			op = "!="
+		}
+		emit(stdout, " ", op, " ")
+		err = convertExpr(stdout, ex.Rhs)
+		if err != nil {
+			return fmt.Errorf("convert rhs %T: %v", ex.Rhs, err)
+		}
+		emit(stdout, ")")
+	case *ast.ArithmeticOpExpr:
+		switch ex.Operator {
+		case "+", "-", "*", "/":
+			emit(stdout, "(")
+			err := convertExpr(stdout, ex.Lhs)
+			if err != nil {
+				return fmt.Errorf("convert lhs %T: %v", ex.Lhs, err)
+			}
+			emit(stdout, " ", ex.Operator, " ")
+			err = convertExpr(stdout, ex.Rhs)
+			if err != nil {
+				return fmt.Errorf("convert rhs %T: %v", ex.Rhs, err)
+			}
+			emit(stdout, ")")
+		case "//", "%", "^":
+			switch ex.Operator {
+			case "/":
+				emit(stdout, "math.Floor(")
+			case "%":
+				emit(stdout, "math.Mod(")
+			case "^":
+				emit(stdout, "math.Pow(")
+			}
+			err := convertExpr(stdout, ex.Lhs)
+			if err != nil {
+				return fmt.Errorf("convert lhs %T: %v", ex.Lhs, err)
+			}
+			emit(stdout, ", ")
+			err = convertExpr(stdout, ex.Rhs)
+			if err != nil {
+				return fmt.Errorf("convert rhs %T: %v", ex.Rhs, err)
+			}
+			emit(stdout, ")")
+		default:
+			return fmt.Errorf("unsupported arithmetic operator: %s", ex.Operator)
+		}
+	case *ast.StringConcatOpExpr:
+		err := convertExpr(stdout, ex.Lhs)
+		if err != nil {
+			return fmt.Errorf("convert lhs %T: %v", ex.Lhs, err)
+		}
+		emit(stdout, " + ")
+		err = convertExpr(stdout, ex.Rhs)
+		if err != nil {
+			return fmt.Errorf("convert rhs %T: %v", ex.Rhs, err)
+		}
+	case *ast.UnaryMinusOpExpr:
+		emit(stdout, "-")
+		err := convertExpr(stdout, ex.Expr)
+		if err != nil {
+			return fmt.Errorf("convert lhs %T: %v", ex.Expr, err)
+		}
+	case *ast.UnaryNotOpExpr:
+		emit(stdout, "!")
+		err := convertExpr(stdout, ex.Expr)
+		if err != nil {
+			return fmt.Errorf("convert lhs %T: %v", ex.Expr, err)
+		}
+	case *ast.UnaryLenOpExpr:
+		emit(stdout, "len(")
+		err := convertExpr(stdout, ex.Expr)
+		if err != nil {
+			return fmt.Errorf("convert lhs %T: %v", ex.Expr, err)
+		}
+		emit(stdout, ")")
 	default:
 		return errors.New("unsupported statement")
 	}
