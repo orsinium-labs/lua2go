@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/yuin/gopher-lua/ast"
 )
@@ -77,6 +78,18 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 			emit(stdout, " ")
 		} else {
 			emit(stdout, "; ", st.Name, "++ ")
+		}
+		return convertBlock(stdout, st.Stmts)
+	case *ast.GenericForStmt:
+		emit(stdout, "for ")
+		if len(st.Names) == 1 {
+			emit(stdout, "_, ", st.Names[0])
+		} else {
+			emit(stdout, strings.Join(st.Names, ", "))
+		}
+		err := convertTuple(stdout, st.Exprs)
+		if err != nil {
+			return err
 		}
 		return convertBlock(stdout, st.Stmts)
 	default:
