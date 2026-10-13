@@ -92,6 +92,30 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 			return err
 		}
 		return convertBlock(stdout, st.Stmts)
+	case *ast.FuncDefStmt:
+		if st.Name.Method != "" {
+			return errors.New("unsupported: method definitions")
+		}
+		if st.Name.Receiver != nil {
+			return errors.New("unsupported: function receiver")
+		}
+		emit(stdout, "func ")
+		err := convertExpr(stdout, st.Name.Func)
+		if err != nil {
+			return fmt.Errorf("convert function name: %v", err)
+		}
+		emit(stdout, "(")
+		ex := st.Func
+		if len(ex.ParList.Names) != 0 {
+			for i, name := range ex.ParList.Names {
+				if i != 0 {
+					emit(stdout, ", ")
+				}
+				emit(stdout, name, " any")
+			}
+		}
+		emit(stdout, ") any ")
+		return convertBlock(stdout, ex.Stmts)
 	default:
 		return errors.New("unsupported statement")
 	}
@@ -100,7 +124,7 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 }
 
 func convertBlock(stdout io.Writer, stmts []ast.Stmt) error {
-	emit(stdout, " {\n")
+	emit(stdout, "{\n")
 	for _, sub := range stmts {
 		err := convertStmt(stdout, sub)
 		if err != nil {
