@@ -190,6 +190,7 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 		if ex.Method != "" {
 			emit(stdout, ".", ex.Method)
 		}
+		emit(stdout, "(")
 		for i, arg := range ex.Args {
 			if i != 0 {
 				emit(stdout, ", ")
@@ -199,6 +200,7 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 				return err
 			}
 		}
+		emit(stdout, ")")
 	case *ast.FunctionExpr:
 		emit(stdout, "func(")
 		if ex.ParList != nil {

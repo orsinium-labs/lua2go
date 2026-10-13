@@ -10,6 +10,9 @@ import (
 )
 
 func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
+	for range depth {
+		emit(stdout, "\t")
+	}
 	switch st := stmt.(type) {
 	case *ast.AssignStmt:
 		err := convertTuple(stdout, st.Lhs)
@@ -53,6 +56,7 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		if err != nil {
 			return err
 		}
+		emit(stdout, " ")
 		err = convertBlock(stdout, st.Then)
 		if err != nil {
 			return err
@@ -111,7 +115,7 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		if st.Name.Receiver != nil {
 			return errors.New("unsupported: function receiver")
 		}
-		emit(stdout, "func ")
+		emit(stdout, "\nfunc ")
 		err := convertExpr(stdout, st.Name.Func)
 		if err != nil {
 			return fmt.Errorf("convert function name: %v", err)
@@ -150,7 +154,10 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 	return nil
 }
 
+var depth = 0
+
 func convertBlock(stdout io.Writer, stmts []ast.Stmt) error {
+	depth++
 	emit(stdout, "{\n")
 	for _, sub := range stmts {
 		err := convertStmt(stdout, sub)
@@ -158,7 +165,11 @@ func convertBlock(stdout io.Writer, stmts []ast.Stmt) error {
 			return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
 		}
 	}
+	for range depth - 1 {
+		emit(stdout, "\t")
+	}
 	emit(stdout, "}")
+	depth--
 	return nil
 }
 
