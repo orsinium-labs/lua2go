@@ -37,9 +37,15 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 			return err
 		}
 	case *ast.FuncCallStmt:
-		return convertExpr(stdout, st.Expr)
+		err := convertExpr(stdout, st.Expr)
+		if err != nil {
+			return err
+		}
 	case *ast.DoBlockStmt:
-		return convertBlock(stdout, st.Stmts)
+		err := convertBlock(stdout, st.Stmts)
+		if err != nil {
+			return err
+		}
 	case *ast.WhileStmt:
 		emit(stdout, "while ")
 		err := convertExpr(stdout, st.Condition)
@@ -50,6 +56,33 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		if err != nil {
 			return err
 		}
+	case *ast.RepeatStmt:
+		emit(stdout, "firstLoop := true\n")
+		for range depth {
+			emit(stdout, "\t")
+		}
+		emit(stdout, "while firstLoop || ")
+		err := convertExpr(stdout, st.Condition)
+		if err != nil {
+			return err
+		}
+		depth++
+		emit(stdout, "{\n")
+		for range depth {
+			emit(stdout, "\t")
+		}
+		emit(stdout, "firstLoop = false\n")
+		for _, sub := range st.Stmts {
+			err := convertStmt(stdout, sub)
+			if err != nil {
+				return fmt.Errorf("convert %T on line %d: %v", sub, sub.Line(), err)
+			}
+		}
+		for range depth - 1 {
+			emit(stdout, "\t")
+		}
+		emit(stdout, "}")
+		depth--
 	case *ast.IfStmt:
 		emit(stdout, "if ")
 		err := convertExpr(stdout, st.Condition)
