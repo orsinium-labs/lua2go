@@ -43,7 +43,10 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		if err != nil {
 			return err
 		}
-		return convertBlock(stdout, st.Stmts)
+		err = convertBlock(stdout, st.Stmts)
+		if err != nil {
+			return err
+		}
 	case *ast.IfStmt:
 		emit(stdout, "if ")
 		err := convertExpr(stdout, st.Condition)
@@ -56,7 +59,10 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		}
 		if len(st.Else) != 0 {
 			emit(stdout, " else ")
-			return convertBlock(stdout, st.Else)
+			err := convertBlock(stdout, st.Else)
+			if err != nil {
+				return err
+			}
 		}
 	case *ast.NumberForStmt:
 		emit(stdout, "for ", st.Name, " := ")
@@ -79,7 +85,10 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		} else {
 			emit(stdout, "; ", st.Name, "++ ")
 		}
-		return convertBlock(stdout, st.Stmts)
+		err = convertBlock(stdout, st.Stmts)
+		if err != nil {
+			return err
+		}
 	case *ast.GenericForStmt:
 		emit(stdout, "for ")
 		if len(st.Names) == 1 {
@@ -91,7 +100,10 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 		if err != nil {
 			return err
 		}
-		return convertBlock(stdout, st.Stmts)
+		err = convertBlock(stdout, st.Stmts)
+		if err != nil {
+			return err
+		}
 	case *ast.FuncDefStmt:
 		if st.Name.Method != "" {
 			return errors.New("unsupported: method definitions")
@@ -115,10 +127,16 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 			}
 		}
 		emit(stdout, ") any ")
-		return convertBlock(stdout, ex.Stmts)
+		err = convertBlock(stdout, ex.Stmts)
+		if err != nil {
+			return err
+		}
 	case *ast.ReturnStmt:
 		emit(stdout, "return ")
-		return convertTuple(stdout, st.Exprs)
+		err := convertTuple(stdout, st.Exprs)
+		if err != nil {
+			return err
+		}
 	case *ast.BreakStmt:
 		emit(stdout, "break")
 	case *ast.LabelStmt:
@@ -126,7 +144,7 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 	case *ast.GotoStmt:
 		emit(stdout, "goto ", st.Label)
 	default:
-		return errors.New("unsupported statement")
+		return fmt.Errorf("unsupported statement: %T", st)
 	}
 	emit(stdout, "\n")
 	return nil
