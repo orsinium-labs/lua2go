@@ -28,10 +28,20 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 		if err != nil {
 			return fmt.Errorf("convert %T: %v", ex.Object, err)
 		}
-		emit(stdout, ".")
-		err = convertExpr(stdout, ex.Key)
-		if err != nil {
-			return fmt.Errorf("convert %T: %v", ex.Key, err)
+		_, isStr := ex.Key.(*ast.StringExpr)
+		if isStr {
+			emit(stdout, ".")
+			err = convertExpr(stdout, ex.Key)
+			if err != nil {
+				return fmt.Errorf("convert %T: %v", ex.Key, err)
+			}
+		} else {
+			emit(stdout, "[")
+			err = convertExpr(stdout, ex.Key)
+			if err != nil {
+				return fmt.Errorf("convert %T: %v", ex.Key, err)
+			}
+			emit(stdout, "]")
 		}
 	case *ast.LogicalOpExpr:
 		emit(stdout, "(")
