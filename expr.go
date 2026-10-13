@@ -22,7 +22,7 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 		// TODO: escape
 		emit(stdout, `"`, ex.Value, `"`)
 	case *ast.IdentExpr:
-		emit(stdout, ex.Value)
+		emit(stdout, fixReserved(ex.Value))
 	case *ast.AttrGetExpr:
 		err := convertExpr(stdout, ex.Object)
 		if err != nil {
@@ -30,7 +30,7 @@ func convertExpr(stdout io.Writer, expr ast.Expr) error {
 		}
 		key, isStr := ex.Key.(*ast.StringExpr)
 		if isStr {
-			emit(stdout, ".", key.Value)
+			emit(stdout, ".", fixReserved(key.Value))
 		} else {
 			emit(stdout, "[")
 			err = convertExpr(stdout, ex.Key)

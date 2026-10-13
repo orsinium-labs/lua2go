@@ -25,16 +25,32 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 			return err
 		}
 	case *ast.LocalAssignStmt:
-		for i, name := range st.Names {
-			if i != 0 {
-				emit(stdout, ", ")
+		if len(st.Names) == len(st.Exprs) {
+			for i, name := range st.Names {
+				if i != 0 {
+					emit(stdout, "\n")
+					for range depth {
+						emit(stdout, "\t")
+					}
+				}
+				emit(stdout, fixReserved(name), " := ")
+				err := convertExpr(stdout, st.Exprs[i])
+				if err != nil {
+					return err
+				}
 			}
-			emit(stdout, name)
-		}
-		emit(stdout, " := ")
-		err := convertTuple(stdout, st.Exprs)
-		if err != nil {
-			return err
+		} else {
+			for i, name := range st.Names {
+				if i != 0 {
+					emit(stdout, ", ")
+				}
+				emit(stdout, fixReserved(name))
+			}
+			emit(stdout, " := ")
+			err := convertTuple(stdout, st.Exprs)
+			if err != nil {
+				return err
+			}
 		}
 	case *ast.FuncCallStmt:
 		err := convertExpr(stdout, st.Expr)
@@ -145,7 +161,7 @@ func convertStmt(stdout io.Writer, stmt ast.Stmt) error {
 				if i != 0 {
 					emit(stdout, ", ")
 				}
-				emit(stdout, name, " any")
+				emit(stdout, fixReserved(name), " any")
 			}
 		}
 		emit(stdout, ") any ")
@@ -202,4 +218,24 @@ func convertTuple(stdout io.Writer, exprs []ast.Expr) error {
 		}
 	}
 	return nil
+}
+
+func fixReserved(t string) string {
+	if isReserved(t) {
+		return t + "_"
+	}
+	return t
+}
+
+func isReserved(t string) bool {
+	// https://go.dev/ref/spec#Keywords
+	switch t {
+	case "break", "default", "func", "interface", "select",
+		"case", "defer", "go", "map", "struct",
+		"chan", "else", "goto", "package", "switch",
+		"const", "fallthrough", "if", "range", "type",
+		"continue", "for", "import", "return", "var":
+		return true
+	}
+	return false
 }
